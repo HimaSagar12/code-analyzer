@@ -123,10 +123,34 @@ def main():
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
+            
+            # Get AI-based analysis (chunked or full)
             analysis = analyze_code_with_groq(client, file_path, content)
-            analysis_report += f"## File: `{file_path}`\n\n{analysis}\n\n---\n\n"
+            analysis_report += f"## File: `{file_path}`\n\n{analysis}\n\n"
+
+            # Perform direct analysis for entry points and dependencies,
+            # as this is more reliable than AI context, especially for large files.
+            entry_point_found = "Yes" if 'if __name__ == "__main__":' in content else "No"
+            
+            dependencies = []
+            for line in content.splitlines():
+                if line.strip().startswith("import ") or line.strip().startswith("from "):
+                    dependencies.append(line.strip())
+            
+            analysis_report += "### Direct Code Analysis\n\n"
+            analysis_report += f"- **Potential Entry Point:** {entry_point_found}\n"
+            
+            if dependencies:
+                analysis_report += "- **Dependencies (Imports):**\n"
+                for dep in dependencies:
+                    analysis_report += f"  - `{dep}`\n"
+            else:
+                analysis_report += "- **Dependencies (Imports):** None found.\n"
+
+            analysis_report += "\n---\n\n"
+
         except Exception as e:
-            analysis_report += f"## File: `{file_path}`\n\nError reading file: {e}\n\n---\n\n"
+            analysis_report += f"## File: `{file_path}`\n\nError reading file: {e}\n\n---\n\n"}
 
     # Write the report
     with open("CODE_FLOW_ANALYSIS.md", "w") as f:
