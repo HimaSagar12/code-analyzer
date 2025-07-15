@@ -6,8 +6,12 @@ This guide will walk you through setting up and running the Python code analyzer
 
 Before you can use the tool, you must provide your Groq API key.
 
-1.  Open the `config.yaml` file.
-2.  Replace the placeholder text `"YOUR_GROQ_API_KEY"` with your actual Groq API key.
+1.  Create a copy of the example configuration file. In your terminal, run:
+    ```bash
+    cp config.yaml.example config.yaml
+    ```
+2.  Open the newly created `config.yaml` file.
+3.  Replace the placeholder text `"YOUR_GROQ_API_KEY_HERE"` with your actual Groq API key.
 
 ## Step 2: Make the Script Executable
 

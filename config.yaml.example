@@ -1,0 +1,4 @@
+# This is an example configuration file.
+# Copy this file to config.yaml and add your API key.
+
+groq_api_key: "YOUR_GROQ_API_KEY_HERE"
