@@ -19,34 +19,78 @@ def get_api_key():
         sys.exit(1)
 
 def analyze_code_with_groq(client, file_path, file_content):
-    """Analyzes a single Python file using the Groq API."""
-    prompt = f"""
-    Analyze the following Python code from the file '{file_path}':
-
-    ```python
-    {file_content}
-    ```
-
-    Provide a brief, one-paragraph summary of the file's purpose.
-    Then, identify the following:
-    - **Main Functions:** List the key functions and their primary roles.
-    - **Classes:** List the classes and their responsibilities.
-    - **Entry Point:** State whether this file appears to be a potential entry point (e.g., contains `if __name__ == "__main__":`).
-    - **Dependencies:** What other files in the project does this file seem to depend on?
     """
-    try:
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-            model="llama3-8b-8192",
-        )
-        return chat_completion.choices[0].message.content
-    except Exception as e:
-        return f"Error analyzing {file_path} with Groq: {e}"
+    Analyzes Python code using the Groq API.
+    If the file is large, it splits the content into chunks.
+    """
+    # Set a character limit to avoid exceeding the model's context window.
+    # 15,000 chars is a safe buffer for an 8192 token limit.
+    CHAR_LIMIT = 15000
+    
+    if len(file_content) <= CHAR_LIMIT:
+        # File is small enough to be processed in one go
+        prompt = f"""
+        Analyze the following Python code from the file '{file_path}':
+
+        ```python
+        {file_content}
+        ```
+
+        Provide a brief, one-paragraph summary of the file's purpose.
+        Then, identify the following:
+        - **Main Functions:** List the key functions and their primary roles.
+        - **Classes:** List the classes and their responsibilities.
+        - **Entry Point:** State whether this file appears to be a potential entry point (e.g., contains `if __name__ == "__main__":`).
+        - **Dependencies:** What other files in the project does this file seem to depend on?
+        """
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+                model="llama3-8b-8192",
+            )
+            return chat_completion.choices[0].message.content
+        except Exception as e:
+            return f"Error analyzing {file_path} with Groq: {e}"
+    else:
+        # File is large, so we process it in chunks
+        chunks = [file_content[i:i + CHAR_LIMIT] for i in range(0, len(file_content), CHAR_LIMIT)]
+        full_analysis = f"**Note: This file was too large and has been analyzed in {len(chunks)} chunks.**\n\n"
+        
+        for i, chunk in enumerate(chunks):
+            prompt = f"""
+            The following is chunk {i+1} of {len(chunks)} for the file '{file_path}'.
+            Please analyze this specific chunk of Python code. Focus only on the code provided in this chunk.
+
+            ```python
+            {chunk}
+            ```
+
+            Provide a brief summary of this chunk's purpose.
+            Then, identify the following within this chunk:
+            - **Main Functions:** List any functions defined or called.
+            - **Classes:** List any classes defined.
+            """
+            try:
+                chat_completion = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt,
+                        }
+                    ],
+                    model="llama3-8b-8192",
+                )
+                analysis_chunk = chat_completion.choices[0].message.content
+                full_analysis += f"### Analysis of Chunk {i+1}/{len(chunks)}\n\n{analysis_chunk}\n\n"
+            except Exception as e:
+                full_analysis += f"### Analysis of Chunk {i+1}/{len(chunks)}\n\nError analyzing chunk: {e}\n\n"
+        
+        return full_analysis
 
 def main():
     """Main function to orchestrate the code analysis."""
